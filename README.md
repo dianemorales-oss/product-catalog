@@ -1,17 +1,20 @@
-# CvSU Mini Store - Product Catalog
+# CvSU Mini Store - Live Search and Filter
 
-A mini product catalog built with React and Vite for **Laboratory Exercise 3: React Props and Component Communication** (DCIT26: Application Development and Emerging Technologies).
+A mini product catalog built with React and Vite for **DCIT26: Application Development and Emerging Technologies**.
+
+This project extends **Laboratory Exercise 3: React Props and Component Communication** by adding **Laboratory Exercise 4: React `useState` and `useEffect` (Live Search and Filter)** features.
 
 ## Features
 
-- Reusable `ProductCard` component that receives data through props
-- Product data loaded from `src/data/products.js` and rendered with `.map()` and unique keys
-- Prop destructuring with a default `category` value of `"General"`
-- Conditional rendering and styling for in-stock and out-of-stock products
-- Callback prop (`onAddToCart`) to send data from child to parent
-- Cart message in `App` showing total items added and the last added product
-- `children` prop used to display badges (e.g., `New`, `Sale`) on selected cards
-- Responsive card grid layout with basic CSS styling
+- Reusable `ProductCard` component with props, callback communication, and `children` badges
+- Reusable controlled `SearchBar` component (keyword input, category dropdown, sort dropdown, and clear button)
+- Live product filtering by keyword and category
+- Price sorting options: Default, Price: Low to High, and Price: High to Low
+- Debounced search input (300ms) using `useEffect`, `setTimeout`, and cleanup with `clearTimeout`
+- Document title updates with the current number of matching products
+- Result count display (`Showing X of Y products`) and friendly empty-state message
+- Cart functionality from Lab 3 preserved (`Add to Cart`, total count, and last added item)
+- Responsive layout for the search bar and product grid
 
 ## Project Structure
 
@@ -20,6 +23,8 @@ src/
   components/
     ProductCard.jsx
     ProductCard.css
+    SearchBar.jsx
+    SearchBar.css
   data/
     products.js
   App.jsx
@@ -35,24 +40,25 @@ npm install
 npm run dev
 ```
 
-## Guide Questions
+## Guide Questions (Laboratory Exercise 4)
 
-### 1. What is the difference between props and state?
+### 1. Why do we use two separate states, `searchText` and `debouncedSearch`, instead of only one?
 
-Props are values passed from a parent component to a child component so the child can display data or use behavior provided by the parent. State is data managed inside a component that can change over time, usually because of user interaction. In this project, product details are passed as props to `ProductCard`, while the cart count and last added item are stored as state in `App`.
+`searchText` stores what the user is typing immediately so the input stays responsive and controlled on every keystroke. `debouncedSearch` stores the delayed value that is actually used for filtering. Separating them lets the UI update instantly while the expensive/filtering logic runs only after the user pauses typing, which avoids unnecessary updates on every character.
 
-### 2. Why can a child component not modify the props it receives?
+### 2. What would happen if the debounce effect did not return a cleanup function?
 
-A child component cannot modify its props because props are read-only and owned by the parent component. React uses this one-way data flow to keep components predictable and easier to debug. If a child needs to cause a change, it should call a function passed from the parent (a callback prop) so the parent can update its own state.
+Without a cleanup function, each keystroke would schedule a new `setTimeout`, but previous timers would not be canceled. That means older timers could still run later and update `debouncedSearch` with stale values, causing extra renders and out-of-order or flickering filter results instead of applying only the final paused input.
 
-### 3. How does the `onAddToCart` callback allow data to flow from child to parent even though props only flow downward?
+### 3. What is the purpose of the dependency array? What happens if it is empty (`[]`)? What happens if it is left out completely?
 
-Props flow downward from parent to child, but a prop can also be a function. In this app, `App` passes `handleAddToCart` to each `ProductCard` as the `onAddToCart` prop. When the Add to Cart button is clicked, `ProductCard` calls that function and sends the product title back up. The parent receives that value and updates its state, which updates the cart message.
+The dependency array tells React which values the effect depends on, so React knows when to re-run (and clean up) the effect. If it is empty (`[]`), the effect runs once after the initial render (and cleanup runs on unmount). If it is left out completely, the effect runs after every render, which can cause repeated work, performance issues, or infinite update loops if the effect updates state.
 
-### 4. Why is the `key` prop required when rendering a list with `.map()`? What could happen if it is missing or duplicated?
+### 4. Why should we avoid sorting the original `products` array directly?
 
-The `key` prop helps React identify which list items are stable across renders when items are added, removed, or reordered. Without keys, or with duplicate keys, React may reuse or update the wrong components, which can lead to incorrect UI behavior, unexpected state issues, or performance problems. In this project, each product uses its unique `id` as the key.
+Sorting mutates the array in place. If we sort the original `products` array directly, we permanently change the source data and can introduce bugs or unexpected behavior in other parts of the app that rely on the original order. Creating a copy before sorting (for example, with the spread operator `[...filteredProducts]`) keeps the original data unchanged and makes rendering predictable.
 
-### 5. What does the `children` prop allow you to do that a normal prop does not?
+### 5. Is the filtered product list better stored in its own state, or calculated from existing state during rendering? Explain your choice.
 
-The `children` prop allows you to pass JSX content between a component’s opening and closing tags, making the component more flexible and reusable. Instead of only passing simple values like strings or numbers, you can insert custom elements such as badges or labels inside the card. In this project, some `ProductCard` components receive `<span>New</span>` or `<span>Sale</span>` as children.
+It is better to calculate the filtered product list from existing state during rendering (`search`/debounced value, category, sort order, and the original products data). This avoids duplicating data in state, prevents the filtered list from getting out of sync with its source values, and keeps state as the single source of truth. Since the filtered list can be derived, computing it during render is simpler and more reliable.
+
