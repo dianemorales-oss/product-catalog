@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ProductCard from "./components/ProductCard";
 import SearchBar from "./components/SearchBar";
 import products from "./data/products";
@@ -8,6 +8,7 @@ function App() {
   const [cartCount, setCartCount] = useState(0);
   const [lastAddedItem, setLastAddedItem] = useState("");
   const [searchText, setSearchText] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [sortOrder, setSortOrder] = useState("default");
 
@@ -18,11 +19,20 @@ function App() {
 
   const handleClearFilters = () => {
     setSearchText("");
+    setDebouncedSearch("");
     setCategory("All");
     setSortOrder("default");
   };
 
-  const normalizedSearch = searchText.trim().toLowerCase();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchText);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  const normalizedSearch = debouncedSearch.trim().toLowerCase();
 
   let filteredProducts = products.filter((product) => {
     const matchesSearch = product.title.toLowerCase().includes(normalizedSearch);
